@@ -97,12 +97,12 @@ jobs:
           buildPresetAdditionalArgs: "['--config Release']"
 
       # Login to Docker Hub
-      # - name: Login to Docker Hub
-      #   if: steps.set-push.outputs.doPush == 'true'
-      #   uses: docker/login-action@v3
-      #   with:
-      #     username: ${{ vars.DOCKERHUB_USERNAME }}
-      #     password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Login to Docker Hub
+        if: steps.set-push.outputs.doPush == 'true'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
       # Build then push the image
       - name: Build docker image
         run: |
