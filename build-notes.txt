@@ -1,0 +1,25 @@
+Building this project and vcpkg dependencies via CMake
+
+=== Building locally (tested on Ubuntu 24.04)
+
+Assumptions:
+- Compiler, CMake are installed
+- vcpkg is cloned in the root of the repo at vcpkg
+- vcpkg has been bootstrapped
+
+Configure build (and make vcpkg dependencies):
+cmake -B build -S .
+
+Build project:
+cmake --build build
+
+References:
+https://learn.microsoft.com/en-us/vcpkg/consume/manifest-mode
+https://learn.microsoft.com/en-us/vcpkg/users/buildsystems/cmake-integration
+
+=== GitHub workflow
+
+The GitHub workflow uses actions I found here:
+https://github.com/marketplace/actions/run-vcpkg
+
+The build steps use 'presets' that can be found in `CMakePresets.json`
