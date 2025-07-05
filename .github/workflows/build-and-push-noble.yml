@@ -92,6 +92,7 @@ jobs:
         env:
           VCPKG_BINARY_SOURCES: clear;files,${{ github.workspace }}/vcpkg_cache,readwrite
         with:
+          # run-cmake seems to require presets, these can be found in CMakePresets.json
           configurePreset: ci
           buildPreset: ci
           buildPresetAdditionalArgs: "['--config Release']"

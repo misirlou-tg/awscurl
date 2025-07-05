@@ -54,10 +54,14 @@ docker run -it --rm -v "$HOME/.aws:/home/ubuntu/.aws" --entrypoint /bin/bash mis
 
 ## Building
 
-This uses packages from [vcpkg][vcpkg] ([GitHub][vcpkg-github])
+This uses packages from [vcpkg][vcpkg] ([GitHub][vcpkg-github]) in "manifest mode"
 
 [vcpkg]: https://vcpkg.io/
 [vcpkg-github]: https://github.com/microsoft/vcpkg
+
+vcpkg references:
+- https://learn.microsoft.com/en-us/vcpkg/consume/manifest-mode
+- https://learn.microsoft.com/en-us/vcpkg/users/buildsystems/cmake-integration
 
 ### Windows
 
