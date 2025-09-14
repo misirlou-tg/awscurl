@@ -27,11 +27,6 @@ on:
 permissions:
   contents: read
 
-# Allow one concurrent deployment
-concurrency:
-  group: "push-docker-hub"
-  cancel-in-progress: true
-
 jobs:
   build-push:
     # https://github.com/actions/runner-images/blob/main/images/ubuntu/Ubuntu2404-Readme.md
