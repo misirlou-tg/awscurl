@@ -72,7 +72,7 @@ jobs:
       # https://github.com/lukka/run-cmake/issues/152#issuecomment-2995699875
       # https://github.com/lukka/run-vcpkg/issues/243
       - name: Cache vcpkg
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ${{ github.workspace }}/vcpkg_cache
           key: vcpkg-ubuntu-noble-${{ hashFiles('vcpkg.json', 'vcpkg_overlay/**', 'CMakeLists.txt', 'CMakePresets.json') }}
