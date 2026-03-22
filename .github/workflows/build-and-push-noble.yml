@@ -43,14 +43,15 @@ jobs:
       # IMAGE_TAG will also be available (added in one of the steps)
 
     steps:
-      - name: Checkout repo
+      - name: 📥 Checkout repo
         uses: actions/checkout@v6
-      - run: uname -a
+      - name: 📝 Log info about this runner
+        run: uname -a
 
-      - name: Starting step summary
+      - name: 📝 Starting step summary
         run: echo '## Build and Push summary' >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Set push operation
+      - name: ⚙️ Set push operation (steps.set-push.outputs.doPush)
         id: set-push
         run: |
           if [ '${{ github.event_name }}' = 'pull_request' ]; then
@@ -61,7 +62,7 @@ jobs:
             echo "doPush=true" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Set env.IMAGE_TAG to be "noble-commitHash"
+      - name: ⚙️ Set env.IMAGE_TAG to "noble-commitHash"
         # https://dev.to/hectorleiva/github-actions-and-creating-a-short-sha-hash-8b7
         run: |
           calculatedSha=$(git rev-parse --short ${{ github.sha }})
@@ -69,7 +70,7 @@ jobs:
           echo "IMAGE_TAG=${imageTag}"
           echo "IMAGE_TAG=${imageTag}" >> "$GITHUB_ENV"
 
-      - name: Adding step summary
+      - name: 📝 Adding step summary
         run: |
           # The step summary supports markdown
           echo "Building image with tag: \`${IMAGE_TAG}\`" >> "$GITHUB_STEP_SUMMARY"
@@ -79,18 +80,18 @@ jobs:
       # (also added VCPKG_BINARY_SOURCES below)
       # https://github.com/lukka/run-cmake/issues/152#issuecomment-2995699875
       # https://github.com/lukka/run-vcpkg/issues/243
-      - name: Cache vcpkg
+      - name: 🔧 Setup vcpkg cache
         uses: actions/cache@v5
         with:
           path: ${{ github.workspace }}/vcpkg_cache
           key: vcpkg-ubuntu-noble-${{ hashFiles('vcpkg.json', 'vcpkg_overlay/**', 'CMakeLists.txt', 'CMakePresets.json') }}
 
       # These steps come from https://github.com/marketplace/actions/run-vcpkg
-      - name: Install CMake
+      - name: 🔧 Install CMake
         uses: lukka/get-cmake@latest
-      - name: Run vcpkg
+      - name: 🔨 Run vcpkg, install/compile dependencies
         uses: lukka/run-vcpkg@v11
-      - name: Run CMake
+      - name: 🔨 Run CMake, compile awscurl
         uses: lukka/run-cmake@v10
         env:
           VCPKG_BINARY_SOURCES: clear;files,${{ github.workspace }}/vcpkg_cache,readwrite
@@ -101,29 +102,29 @@ jobs:
           buildPresetAdditionalArgs: "['--config Release']"
 
       # Login to Docker Hub
-      - name: Login to Docker Hub
+      - name: 🔑 Login to Docker Hub
         if: steps.set-push.outputs.doPush == 'true'
         uses: docker/login-action@v4
         with:
           username: ${{ vars.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       # Build the image
-      - name: Build docker image
+      - name: 📦 Build docker image
         run: |
           docker build \
             --tag ${DOCKER_REPO}:latest \
             --tag ${IMAGE_TAG} \
             .
       # Push the IMAGE_TAG
-      - name: Push to Docker Hub
+      - name: 🐳 Push to Docker Hub
         if: steps.set-push.outputs.doPush == 'true'
         run: docker push ${IMAGE_TAG}
       # Push "latest" tag
-      - name: Push latest to Docker Hub
+      - name: 🐳 Push latest image tag to Docker Hub
         if: ${{ steps.set-push.outputs.doPush == 'true' && github.ref == 'refs/heads/master' }}
         run: docker push ${DOCKER_REPO}:latest
 
-      - name: Archive build artifact
+      - name: 📤 Archive build artifact
         uses: actions/upload-artifact@v6
         with:
           name: awscurl-ubuntu-noble
