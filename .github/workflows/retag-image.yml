@@ -22,8 +22,9 @@ jobs:
     steps:
       - name: Adding step summary
         run: |
-          echo "Re-tagging existing image: ${SOURCE_TAG}" >> "$GITHUB_STEP_SUMMARY"
-          echo "With target_tag: ${TARGET_TAG}" >> "$GITHUB_STEP_SUMMARY"
+          # The step summary supports markdown
+          echo "Re-tagging existing image: \`${SOURCE_TAG}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "With target_tag: \`${TARGET_TAG}\`" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Pull existing image from Docker Hub
         run: docker pull ${DOCKER_REPO}:${SOURCE_TAG}
