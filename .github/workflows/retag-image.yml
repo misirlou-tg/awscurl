@@ -2,12 +2,13 @@ name: Re-tag an image
 
 on:
   workflow_dispatch:
-    source_tag:
-      description: 'Source tag (e.g., noble-<hash>)'
-      required: true
-    target_tag:
-      description: 'Target tag (e.g., 1.0.0)'
-      required: true
+    inputs:
+      source_tag:
+        description: 'Source tag (e.g., noble-<hash>)'
+        required: true
+      target_tag:
+        description: 'Target tag (e.g., 1.0.0)'
+        required: true
 
 jobs:
   retag-image:
