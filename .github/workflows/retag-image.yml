@@ -1,4 +1,5 @@
 name: Re-tag an image
+run-name: 🚀 Tagging image ${{ github.event.inputs.target_tag }}
 
 on:
   workflow_dispatch:
