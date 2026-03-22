@@ -37,10 +37,13 @@ jobs:
   build-push:
     # https://github.com/actions/runner-images/blob/main/images/ubuntu/Ubuntu2404-Readme.md
     runs-on: ubuntu-24.04
+    name: 🔨 Build and Push to Docker Hub
 
     env:
+      # This is the repo the image will be pushed to
       DOCKER_REPO: ${{ vars.DOCKERHUB_USERNAME }}/awscurl
-      # IMAGE_TAG will also be available (added in one of the steps)
+      # IMAGE_NAME_LATEST and IMAGE_NAME_COMMIT_HASH will also be added
+      # to env by appending tags to DOCKER_REPO
 
     steps:
       - name: 📥 Checkout repo
@@ -62,18 +65,18 @@ jobs:
             echo "doPush=true" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: ⚙️ Set env.IMAGE_TAG to "noble-commitHash"
+      - name: ⚙️ Add IMAGE_NAMEs to env
+        # Two tags "latest" and "noble-commitHash" will be added to DOCKER_REPO
         # https://dev.to/hectorleiva/github-actions-and-creating-a-short-sha-hash-8b7
         run: |
-          calculatedSha=$(git rev-parse --short ${{ github.sha }})
-          imageTag=${DOCKER_REPO}:noble-${calculatedSha}
-          echo "IMAGE_TAG=${imageTag}"
-          echo "IMAGE_TAG=${imageTag}" >> "$GITHUB_ENV"
+          echo "IMAGE_NAME_LATEST=${DOCKER_REPO}:latest" >> "$GITHUB_ENV"
+          short_hash=$(git rev-parse --short ${{ github.sha }})
+          echo "IMAGE_NAME_COMMIT_HASH=${DOCKER_REPO}:noble-${short_hash}" >> "$GITHUB_ENV"
 
       - name: 📝 Adding step summary
         run: |
           # The step summary supports markdown
-          echo "Building image with tag: \`${IMAGE_TAG}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "Building image with tag: \`${IMAGE_NAME_COMMIT_HASH}\`" >> "$GITHUB_STEP_SUMMARY"
           echo "Performing push: \`${{ steps.set-push.outputs.doPush }}\`" >> "$GITHUB_STEP_SUMMARY"
 
       # Workaround issue where caching of vcpkg packages does not work
@@ -112,17 +115,17 @@ jobs:
       - name: 📦 Build docker image
         run: |
           docker build \
-            --tag ${DOCKER_REPO}:latest \
-            --tag ${IMAGE_TAG} \
+            --tag ${IMAGE_NAME_LATEST} \
+            --tag ${IMAGE_NAME_COMMIT_HASH} \
             .
-      # Push the IMAGE_TAG
+      # Push the image tagged with the commit hash
       - name: 🐳 Push to Docker Hub
         if: steps.set-push.outputs.doPush == 'true'
-        run: docker push ${IMAGE_TAG}
+        run: docker push ${IMAGE_NAME_COMMIT_HASH}
       # Push "latest" tag
       - name: 🐳 Push latest image tag to Docker Hub
         if: ${{ steps.set-push.outputs.doPush == 'true' && github.ref == 'refs/heads/master' }}
-        run: docker push ${DOCKER_REPO}:latest
+        run: docker push ${IMAGE_NAME_LATEST}
 
       - name: 📤 Archive build artifact
         uses: actions/upload-artifact@v6
