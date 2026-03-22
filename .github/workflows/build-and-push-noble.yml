@@ -1,17 +1,23 @@
 name: Build and Push image for Ubuntu 24.04
 
 #
-# This uses Docker's GitHub Actions to build and push the image to our Docker Hub repo:
-# https://docs.docker.com/build/ci/github-actions/
-#
-# Also some information in the actions' GitHub repo:
-# https://github.com/docker/login-action
-# https://github.com/docker/build-push-action
-#
 # Note: This workflow requires that the Docker Hub username & a personal
 # access token (PAT) are configured in GitHub for the repository:
 # - Repostory var: DOCKERHUB_USERNAME
 # - Repostiory secret: DOCKERHUB_TOKEN
+#
+# This uses actions from https://github.com/lukka that I found
+# researching how to build vcpkg. Currently we are building the
+# executable on the GitHub action runner then the Dockerfile
+# copies that to the image.
+#
+# Here are docs on how to use Docker's GitHub actions, currently
+# we are only using the login-action:
+# https://docs.docker.com/build/ci/github-actions/
+#
+# Also some information in Docker's GitHub repo:
+# https://github.com/docker/login-action
+# https://github.com/docker/build-push-action
 #
 
 on:
@@ -34,6 +40,7 @@ jobs:
 
     env:
       DOCKER_REPO: ${{ vars.DOCKERHUB_USERNAME }}/awscurl
+      # IMAGE_TAG will also be available (added in one of the steps)
 
     steps:
       - name: Checkout repo
@@ -54,18 +61,19 @@ jobs:
             echo "doPush=true" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Set env.IMAGE_TAG for our docker hub repo
+      - name: Set env.IMAGE_TAG to be "noble-commitHash"
         # https://dev.to/hectorleiva/github-actions-and-creating-a-short-sha-hash-8b7
         run: |
           calculatedSha=$(git rev-parse --short ${{ github.sha }})
-          imageTag=${{ env.DOCKER_REPO }}:noble-$calculatedSha
-          echo "IMAGE_TAG=$imageTag"
-          echo "IMAGE_TAG=$imageTag" >> "$GITHUB_ENV"
+          imageTag=${DOCKER_REPO}:noble-${calculatedSha}
+          echo "IMAGE_TAG=${imageTag}"
+          echo "IMAGE_TAG=${imageTag}" >> "$GITHUB_ENV"
 
       - name: Adding step summary
         run: |
-          echo 'Building image with tag: `${{ env.IMAGE_TAG }}`' >> "$GITHUB_STEP_SUMMARY"
-          echo 'Performing push: ${{ steps.set-push.outputs.doPush }}' >> "$GITHUB_STEP_SUMMARY"
+          # The step summary supports markdown
+          echo "Building image with tag: \`${IMAGE_TAG}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "Performing push: \`${{ steps.set-push.outputs.doPush }}\`" >> "$GITHUB_STEP_SUMMARY"
 
       # Workaround issue where caching of vcpkg packages does not work
       # (also added VCPKG_BINARY_SOURCES below)
@@ -99,19 +107,21 @@ jobs:
         with:
           username: ${{ vars.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-      # Build then push the image
+      # Build the image
       - name: Build docker image
         run: |
           docker build \
-            --tag ${{ env.DOCKER_REPO }}:latest \
-            --tag ${{ env.IMAGE_TAG }} \
+            --tag ${DOCKER_REPO}:latest \
+            --tag ${IMAGE_TAG} \
             .
+      # Push the IMAGE_TAG
       - name: Push to Docker Hub
         if: steps.set-push.outputs.doPush == 'true'
-        run: docker push ${{ env.IMAGE_TAG }}
+        run: docker push ${IMAGE_TAG}
+      # Push "latest" tag
       - name: Push latest to Docker Hub
         if: ${{ steps.set-push.outputs.doPush == 'true' && github.ref == 'refs/heads/master' }}
-        run: docker push ${{ env.DOCKER_REPO }}:latest
+        run: docker push ${DOCKER_REPO}:latest
 
       - name: Archive build artifact
         uses: actions/upload-artifact@v6
