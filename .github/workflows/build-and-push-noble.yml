@@ -92,7 +92,7 @@ jobs:
       # These steps come from https://github.com/marketplace/actions/run-vcpkg
       - name: 🔧 Install CMake
         uses: lukka/get-cmake@latest
-      - name: 🔨 Run vcpkg, install/compile dependencies
+      - name: 🔧 Install and configure vcpkg
         uses: lukka/run-vcpkg@08ab0cc59d3f33647c5dc2b1e8f2093266c7b873
       - name: 🔨 Run CMake, compile awscurl
         uses: lukka/run-cmake@v10.9
