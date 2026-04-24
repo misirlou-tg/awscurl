@@ -93,9 +93,9 @@ jobs:
       - name: 🔧 Install CMake
         uses: lukka/get-cmake@latest
       - name: 🔧 Install and configure vcpkg
-        uses: lukka/run-vcpkg@08ab0cc59d3f33647c5dc2b1e8f2093266c7b873
+        uses: lukka/run-vcpkg@v11
       - name: 🔨 Run CMake, compile awscurl
-        uses: lukka/run-cmake@v10.9
+        uses: lukka/run-cmake@v10
         env:
           VCPKG_BINARY_SOURCES: clear;files,${{ github.workspace }}/vcpkg_cache,readwrite
         with:
