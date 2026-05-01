@@ -47,7 +47,7 @@ jobs:
 
     steps:
       - name: 📥 Checkout repo
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: 📝 Log info about this runner
         run: uname -a
 
@@ -84,18 +84,18 @@ jobs:
       # https://github.com/lukka/run-cmake/issues/152#issuecomment-2995699875
       # https://github.com/lukka/run-vcpkg/issues/243
       - name: 🔧 Setup vcpkg cache
-        uses: actions/cache@v5
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
         with:
           path: ${{ github.workspace }}/vcpkg_cache
           key: vcpkg-ubuntu-noble-${{ hashFiles('vcpkg.json', 'vcpkg_overlay/**', 'CMakeLists.txt', 'CMakePresets.json') }}
 
       # These steps come from https://github.com/marketplace/actions/run-vcpkg
       - name: 🔧 Install CMake
-        uses: lukka/get-cmake@latest
-      - name: 🔨 Run vcpkg, install/compile dependencies
-        uses: lukka/run-vcpkg@v11
+        uses: lukka/get-cmake@7bfc9baacbbdcb5e37957ad05c3546b3e222be3c # v4.3.2
+      - name: 🔧 Install and configure vcpkg
+        uses: lukka/run-vcpkg@b1a0dd252f06b9e25b3c022a9a03bd7a427fb6a2 # v11.6
       - name: 🔨 Run CMake, compile awscurl
-        uses: lukka/run-cmake@v10
+        uses: lukka/run-cmake@5d55ea7949e25f69f0ecb516d8d572297e03a956 # v10.9
         env:
           VCPKG_BINARY_SOURCES: clear;files,${{ github.workspace }}/vcpkg_cache,readwrite
         with:
@@ -107,7 +107,7 @@ jobs:
       # Login to Docker Hub
       - name: 🔑 Login to Docker Hub
         if: steps.set-push.outputs.doPush == 'true'
-        uses: docker/login-action@v4
+        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4.10
         with:
           username: ${{ vars.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -128,7 +128,7 @@ jobs:
         run: docker push ${IMAGE_NAME_LATEST}
 
       - name: 📤 Archive build artifact
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: awscurl-ubuntu-noble
           path: build/awscurl
