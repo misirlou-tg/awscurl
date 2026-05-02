@@ -1,0 +1,38 @@
+name: "Scan GitHub Workflows"
+
+on:
+  push:
+    branches: [ "master" ]
+    paths:
+      - ".github/workflows/**"
+  pull_request:
+    branches: [ "master" ]
+    paths:
+      - ".github/workflows/**"
+  schedule:
+    # Runs at 18:33, only on Sunday
+    - cron: '33 18 * * 0'
+  workflow_dispatch:
+
+jobs:
+  analyze:
+    name: Analyze
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      actions: read
+      contents: read
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v6
+
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v4
+      with:
+        languages: actions
+        # Add the '+' to keep default queries while adding others
+        queries: +security-extended,security-and-quality
+
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v4
