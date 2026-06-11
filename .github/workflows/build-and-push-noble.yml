@@ -32,6 +32,7 @@ on:
 
 permissions:
   contents: read
+  packages: write
 
 jobs:
   build-push:
@@ -42,6 +43,9 @@ jobs:
     env:
       # This is the repo the image will be pushed to
       DOCKER_REPO: ${{ vars.DOCKERHUB_USERNAME }}/awscurl
+      # Our GitHub username & the URL for the package feed, used when configuring and accessing GitHub Packages
+      USERNAME: ${{ github.repository_owner }}
+      FEED_URL: https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json
       # IMAGE_NAME_LATEST and IMAGE_NAME_COMMIT_HASH will also be added
       # to env by appending tags to DOCKER_REPO
 
@@ -79,25 +83,41 @@ jobs:
           echo "Building image with tag: \`${IMAGE_NAME_COMMIT_HASH}\`" >> "$GITHUB_STEP_SUMMARY"
           echo "Performing push: \`${{ steps.set-push.outputs.doPush }}\`" >> "$GITHUB_STEP_SUMMARY"
 
-      # Workaround issue where caching of vcpkg packages does not work
-      # (also added VCPKG_BINARY_SOURCES below)
-      # https://github.com/lukka/run-cmake/issues/152#issuecomment-2995699875
-      # https://github.com/lukka/run-vcpkg/issues/243
-      - name: 🔧 Setup vcpkg cache
-        uses: actions/cache@v5
-        with:
-          path: ${{ github.workspace }}/vcpkg_cache
-          key: vcpkg-ubuntu-noble-${{ hashFiles('vcpkg.json', 'vcpkg_overlay/**', 'CMakeLists.txt', 'CMakePresets.json') }}
-
-      # These steps come from https://github.com/marketplace/actions/run-vcpkg
+      # These steps (and the run-cmake later) come from:
+      # https://github.com/marketplace/actions/run-vcpkg
       - name: 🔧 Install CMake
         uses: lukka/get-cmake@591817e96fcad43505fb4eae36172462abb3a42e # v4.3.3
       - name: 🔧 Install and configure vcpkg
         uses: lukka/run-vcpkg@b1a0dd252f06b9e25b3c022a9a03bd7a427fb6a2 # v11.6
+
+      # Use GitHub Packages to "cache" packages built by vcpkg (via NuGet)
+      # These steps, the environment vars they use (including VCPKG_BINARY_SOURCES
+      # later) are derived from the vcpkg documentation:
+      # https://learn.microsoft.com/en-us/vcpkg/consume/binary-caching-github-packages?pivots=linux-runner
+      - name: 🔧 Install mono
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y mono-complete
+      - name: 🔧 Add GitHub Packages as a NuGet source
+        env:
+          VCPKG_EXE: ${{ github.workspace }}/vcpkg/vcpkg
+        run: |
+          mono `${{ env.VCPKG_EXE }} fetch nuget | tail -n 1` \
+            sources add \
+            -Source "${{ env.FEED_URL }}" \
+            -StorePasswordInClearText \
+            -Name GitHubPackages \
+            -UserName "${{ env.USERNAME }}" \
+            -Password "${{ secrets.GITHUB_TOKEN }}"
+          mono `${{ env.VCPKG_EXE }} fetch nuget | tail -n 1` \
+            setapikey "${{ secrets.GITHUB_TOKEN }}" \
+            -Source "${{ env.FEED_URL }}"
+
       - name: 🔨 Run CMake, compile awscurl
         uses: lukka/run-cmake@5d55ea7949e25f69f0ecb516d8d572297e03a956 # v10.9
         env:
-          VCPKG_BINARY_SOURCES: clear;files,${{ github.workspace }}/vcpkg_cache,readwrite
+          # Configure vcpkg to use NuGet (see link to vcpkg doc above)
+          VCPKG_BINARY_SOURCES: clear;nuget,${{ env.FEED_URL }},readwrite
         with:
           # run-cmake seems to require presets, these can be found in CMakePresets.json
           configurePreset: ci
