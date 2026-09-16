@@ -40,6 +40,7 @@ int main(int argc, char *argv[])
         { "PATCH", Aws::Http::HttpMethod::HTTP_PATCH }
     };
 
+    // Parse the command line into the following values
     std::optional<Aws::Http::HttpMethod> requestMethod;
     std::optional<std::string> postData;
     bool postDataBinary = false;
@@ -80,6 +81,7 @@ int main(int argc, char *argv[])
     }
     if(!requestMethod)
     {
+        // Default the requestMethod to GET/POST based on if there is data to be posted
         requestMethod.emplace(postData
                                   ? Aws::Http::HttpMethod::HTTP_POST
                                   : Aws::Http::HttpMethod::HTTP_GET);
@@ -98,15 +100,11 @@ int main(int argc, char *argv[])
     Aws::InitAPI(options);
     const char *allocTag = "awscurl";
 
+    // Load AWS client configuration and setup the credentials provider that we will use to sign the request
     std::unique_ptr<Aws::Client::ClientConfiguration> pClientConfig;
     std::shared_ptr<Aws::Auth::AWSCredentialsProvider> spCredentialsProvider;
-    std::string roleArn;
-    if(profile.length() == 0)
-    {
-        pClientConfig = std::make_unique<Aws::Client::ClientConfiguration>();
-        spCredentialsProvider = Aws::MakeShared<Aws::Auth::DefaultAWSCredentialsProviderChain>(allocTag);
-    }
-    else
+    std::string roleArnToAssume;
+    if(profile.length() != 0)
     {
         pClientConfig = std::make_unique<Aws::Client::ClientConfiguration>(profile.c_str());
         // Default is to load credentials from this profile
@@ -124,14 +122,20 @@ int main(int argc, char *argv[])
                 // Implementing how I read the this link: https://docs.aws.amazon.com/cli/latest/topic/config-vars.html
                 // SourceProfile is only used to assume the RoleArn, not used for ClientConfiguration
                 credentialsProfile = awsProfile.GetSourceProfile();
-                roleArn = awsProfile.GetRoleArn();
+                roleArnToAssume = awsProfile.GetRoleArn();
             }
         }
         spCredentialsProvider = Aws::MakeShared<Aws::Auth::ProfileConfigFileAWSCredentialsProvider>(allocTag, credentialsProfile.c_str());
     }
+    else
+    {
+        // No profile requested, use the default client configuration & credential provider
+        pClientConfig = std::make_unique<Aws::Client::ClientConfiguration>();
+        spCredentialsProvider = Aws::MakeShared<Aws::Auth::DefaultAWSCredentialsProviderChain>(allocTag);
+    }
 #ifdef VERBOSE_LOGGING
     std::cout << "profile: " << profile << std::endl;
-    std::cout << "roleArn: " << roleArn << std::endl;
+    std::cout << "roleArnToAssume: " << roleArnToAssume << std::endl;
     std::cout << "pClientConfig->region: " << pClientConfig->region << std::endl;
 #endif
     if(region.length() == 0)
@@ -139,12 +143,13 @@ int main(int argc, char *argv[])
         region = pClientConfig->region;
     }
 
-    if(roleArn.length() != 0)
+    // If the client configuration contains a role to assume, our code needs to do that
+    if(roleArnToAssume.length() != 0)
     {
         Aws::STS::Model::AssumeRoleRequest assumeRoleRequest;
         assumeRoleRequest
             .WithRoleSessionName("awscurl")
-            .WithRoleArn(roleArn)
+            .WithRoleArn(roleArnToAssume)
             .SetDurationSeconds(900);
 
         Aws::STS::STSClient stsClient(spCredentialsProvider, *pClientConfig);
@@ -157,7 +162,7 @@ int main(int argc, char *argv[])
             return 1;
         }
 
-        // "Overwrite" spCredentialsProvider with one constructed with the assumed credentials
+        // Replace spCredentialsProvider with one constructed with the assumed credentials
         const auto &credentials = assumeRoleOutcome.GetResult().GetCredentials();
         spCredentialsProvider = Aws::MakeShared<Aws::Auth::SimpleAWSCredentialsProvider>(
             allocTag,
@@ -165,6 +170,8 @@ int main(int argc, char *argv[])
             credentials.GetSecretAccessKey(),
             credentials.GetSessionToken());
     }
+
+    // Build and sign the request
 
     auto spAuthV4Signer = Aws::MakeShared<Aws::Client::AWSAuthV4Signer>(
         allocTag,
