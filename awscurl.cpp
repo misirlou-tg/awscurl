@@ -22,6 +22,7 @@
 // STS module is used for assuming a role:
 // https://sdk.amazonaws.com/cpp/api/LATEST/aws-cpp-sdk-sts/html/annotated.html
 
+std::expected<std::shared_ptr<Aws::IOStream>, std::string> LoadFile(std::string fileName, bool asBinary, const char *allocTag);
 Aws::Http::URI FixupUrl(const std::string &url);
 
 int main(int argc, char *argv[])
@@ -194,32 +195,19 @@ int main(int argc, char *argv[])
 
     if(postData)
     {
+        // Add content body to the request
         std::shared_ptr<Aws::IOStream> spBodyStream;
         if(postData->front() == '@')
         {
             auto fileName = postData->substr(1);
-            Aws::FStream inputStream(fileName, postDataBinary ? std::ios::in | std::ios::binary : std::ios::in);
-            if(!inputStream.is_open())
+            auto result = LoadFile(fileName, postDataBinary, allocTag);
+            if(!result)
             {
-                std::cerr << "Error opening input file '" << fileName << "'\n";
+                std::cerr << result.error() << std::endl;
                 return 1;
             }
 
-            if(postDataBinary)
-            {
-                spBodyStream = Aws::MakeShared<Aws::FStream>(allocTag, std::move(inputStream));
-            }
-            else
-            {
-                spBodyStream = Aws::MakeShared<Aws::StringStream>(allocTag);
-                // This follows curl's behavior when reading the data file
-                // "carriage returns, newlines and null bytes are stripped out"
-                std::string line;
-                while(std::getline(inputStream, line))
-                {
-                    *spBodyStream << line;
-                }
-            }
+            spBodyStream = *result;
         }
         else
         {
@@ -263,6 +251,32 @@ int main(int argc, char *argv[])
 
     Aws::ShutdownAPI(options);
     return 0;
+}
+
+// Load the specified file into an IOStream shared_ptr
+// If there is an error reading the file a string describing the error will be available
+std::expected<std::shared_ptr<Aws::IOStream>, std::string> LoadFile(std::string fileName, bool asBinary, const char *allocTag)
+{
+    Aws::FStream inputStream(fileName, asBinary ? std::ios::in | std::ios::binary : std::ios::in);
+    if(!inputStream.is_open())
+    {
+        return std::unexpected(std::format("Error opening input file '{}'", fileName));
+    }
+
+    if(asBinary)
+    {
+        return Aws::MakeShared<Aws::FStream>(allocTag, std::move(inputStream));
+    }
+
+    auto spOutputStream = Aws::MakeShared<Aws::StringStream>(allocTag);
+    // This follows curl's behavior when reading the data file
+    // "carriage returns, newlines and null bytes are stripped out"
+    std::string line;
+    while(std::getline(inputStream, line))
+    {
+        *spOutputStream << line;
+    }
+    return spOutputStream;
 }
 
 // Fixup the URL by URL encoding the query parameters

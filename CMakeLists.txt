@@ -6,7 +6,7 @@ project(awscurl VERSION 1.0)
 
 add_executable(${PROJECT_NAME} awscurl.cpp)
 
-target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_17)
+target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_23)
 
 find_package(CLI11 CONFIG REQUIRED)
 target_link_libraries(${PROJECT_NAME} PRIVATE CLI11::CLI11)

@@ -11,6 +11,8 @@
 #include "aws/sts/model/AssumeRoleRequest.h"
 
 #include <algorithm>
+#include <expected>
+#include <format>
 #include <iostream>
 #include <optional>
 #include <memory>
