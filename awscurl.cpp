@@ -214,15 +214,14 @@ int main(int argc, char *argv[])
             spBodyStream = Aws::MakeShared<Aws::StringStream>(allocTag, *postData);
         }
         spBodyStream->seekp(0, std::ios::end);
-        auto bodyLength = spBodyStream->tellp();
+        auto bodyLength = static_cast<std::streamoff>(spBodyStream->tellp());
 
         spHttpRequest->AddContentBody(spBodyStream);
         // Not required to call SetContentType() as long as headerValues contains "Content-Type"
-        Aws::StringStream intConverter;
-        intConverter << bodyLength;
-        spHttpRequest->SetContentLength(intConverter.str());
+        auto strBodyLength = std::format("{}", bodyLength);
+        spHttpRequest->SetContentLength(strBodyLength);
 #ifdef VERBOSE_LOGGING
-        std::cout << "Added content body, length = " << bodyLength << std::endl;
+        std::cout << "Added content body, length = " << strBodyLength << std::endl;
 #endif
     }
 
